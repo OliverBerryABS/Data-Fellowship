@@ -1,0 +1,94 @@
+
+#This stage is the data cleaning part of my program. The idea is the create dummy observations for each
+#"x" and "Y" variable that I want to use.
+
+
+#Import required packages"
+
+import pandas as pd
+
+import numpy as np
+
+
+#Import each dataset"
+
+
+pp10=pd.read_csv("D:\Data\PP_10.csv")
+npp10=pd.read_csv("D:\Data\\NPP_10.csv")
+
+fullpop10=pp10.append(npp10)
+
+#Duplicate lists"
+#Sort first, so duplicates list is actually useful at picking out the max wage"
+#Main Job is created as the job with the highest wage, however it is flagged 0 for the main job and 1 for others"
+
+fullpop10=fullpop10.sort_values(['Scrambled_tfn', 'wage'], ascending=[True, False])
+fullpop10['Main_Job'] = fullpop10.duplicated(['Scrambled_tfn']).astype(int)
+
+#Create an identifier if it's duplicated at all, thus a multiple job holder"
+fullpop10['Multiple_Job'] =  fullpop10.duplicated('Scrambled_tfn',keep=False).astype(int)
+fullpop10['Year'] = 10
+
+#Tidy up the dataset"
+
+fullpop10=fullpop10.drop("IDV_OCPTN_TXT",1)
+fullpop10['Scrambled_tfn']=fullpop10['Scrambled_tfn'].apply('{:0>9}'.format)
+fullpop10['X_ST_OP']=fullpop10['X_ST_OP'].apply('{:0>9}'.format)
+fullpop10['X_ST_OP'] = fullpop10['X_ST_OP'].astype(str)
+
+#Create States of Operation Dummy"
+fullpop10['State_1'] = np.where(fullpop10.X_ST_OP.str.contains('1'), '1', '0')
+fullpop10['State_2'] = np.where(fullpop10.X_ST_OP.str.contains('2'), '1', '0')
+fullpop10['State_3'] = np.where(fullpop10.X_ST_OP.str.contains('3'), '1', '0')
+fullpop10['State_4'] = np.where(fullpop10.X_ST_OP.str.contains('4'), '1', '0')
+fullpop10['State_5'] = np.where(fullpop10.X_ST_OP.str.contains('5'), '1', '0')
+fullpop10['State_6'] = np.where(fullpop10.X_ST_OP.str.contains('6'), '1', '0')
+fullpop10['State_7'] = np.where(fullpop10.X_ST_OP.str.contains('7'), '1', '0')
+fullpop10['State_8'] = np.where(fullpop10.X_ST_OP.str.contains('8'), '1', '0')
+fullpop10['State_9'] = np.where(fullpop10.X_ST_OP.str.contains('9'), '1', '0')
+
+#Encode the others"
+
+#Steps are 1. Change from float to general"
+#"2. Get the Dummies - Adding the Prefix for future use"
+
+
+#"Gender"
+fullpop10['IDV_SEX_DCD'] = fullpop10['IDV_SEX_DCD'].apply('{:.0f}'.format)
+gd_IDV_SEX_DCD = pd.get_dummies(fullpop10['IDV_SEX_DCD'], prefix="Sex")
+
+
+#"Occupation Codes"
+fullpop10['idv_ocptn_cd_10'] = fullpop10['idv_ocptn_cd_10'].apply('{:.0f}'.format)
+gd_IDV_OCPTN_CD_10 = pd.get_dummies(fullpop10['idv_ocptn_cd_10'], prefix="Ocpt_Code", sparse=True)
+
+#"Main Job"
+gd_MAIN_JOB = pd.get_dummies(fullpop10['Main_Job'], prefix="Main_Job")
+
+#"Multiple Job Holders"
+gd_MULTIPLE_JOB = pd.get_dummies(fullpop10['Multiple_Job'], prefix="Multiple_Job")
+
+#"Industry Division"
+gd_DIV = pd.get_dummies(fullpop10['div'], prefix="div")
+
+#"SISCA"
+
+fullpop10['X_SISCA08'] = fullpop10['X_SISCA08'].apply('{:.0f}'.format)
+gd_SISCA = pd.get_dummies(fullpop10['X_SISCA08'], prefix="SISCA")
+
+#"SA2"
+fullpop10['SA2'] = fullpop10['SA2'].apply('{:.0f}'.format)
+gd_SA2 = pd.get_dummies(fullpop10['SA2'], prefix="SA2", sparse=True)
+
+#"Age"
+age_dict = {'under 15': 0, '15-19': 1, '20-24' :2, '25-29': 3, '30-34': 4, '35-39': 5, '40-44': 6,'45-49': 7, '50-54': 8, '55-59': 9, '60-64': 10, '65-69': 11, '70 or older': 12}
+fullpop10['Age_Cat'] = fullpop10['age_on_1jul2009'].map(age_dict)
+fullpop10['Age_Cat'] = fullpop10['Age_Cat'].apply('{:.0f}'.format)
+
+fullpop10
+#"Piece each of the categories back togeter"
+full10 = pd.concat([fullpop10,gd_IDV_SEX_DCD,gd_MAIN_JOB,gd_MULTIPLE_JOB,gd_DIV,gd_SISCA,gd_SA2, gd_IDV_OCPTN_CD_10],axis=1)
+
+#Split Dataset apart as it was before (NPP and PP)
+ready_NPP_10 = full10.query('bg_id' == np.NaN)
+ready_PP_10 = full10.query('bg_id' != np.NaN)
