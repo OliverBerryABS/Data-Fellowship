@@ -9,18 +9,27 @@ import pandas as pd
 
 import numpy as np
 
+import pickle
 
 #Import each dataset"
+
+
+
 
 
 pp10=pd.read_csv("D:\Data\PP_10.csv")
 npp10=pd.read_csv("D:\Data\\NPP_10.csv")
 
-fullpop10=pp10.append(npp10)
+#Combine both files and reset the index.
+fullpop10=pp10.append(npp10).reset_index(drop=True)
+
+
+
 
 #Duplicate lists"
 #Sort first, so duplicates list is actually useful at picking out the max wage"
 #Main Job is created as the job with the highest wage, however it is flagged 0 for the main job and 1 for others"
+#This is done before chunking to allow for accurate results.
 
 fullpop10=fullpop10.sort_values(['Scrambled_tfn', 'wage'], ascending=[True, False])
 fullpop10['Main_Job'] = fullpop10.duplicated(['Scrambled_tfn']).astype(int)
@@ -28,6 +37,10 @@ fullpop10['Main_Job'] = fullpop10.duplicated(['Scrambled_tfn']).astype(int)
 #Create an identifier if it's duplicated at all, thus a multiple job holder"
 fullpop10['Multiple_Job'] =  fullpop10.duplicated('Scrambled_tfn',keep=False).astype(int)
 fullpop10['Year'] = 10
+
+
+    
+    
 
 #Tidy up the dataset"
 
@@ -37,15 +50,15 @@ fullpop10['X_ST_OP']=fullpop10['X_ST_OP'].apply('{:0>9}'.format)
 fullpop10['X_ST_OP'] = fullpop10['X_ST_OP'].astype(str)
 
 #Create States of Operation Dummy"
-fullpop10['State_1'] = np.where(fullpop10.X_ST_OP.str.contains('1'), '1', '0')
-fullpop10['State_2'] = np.where(fullpop10.X_ST_OP.str.contains('2'), '1', '0')
-fullpop10['State_3'] = np.where(fullpop10.X_ST_OP.str.contains('3'), '1', '0')
-fullpop10['State_4'] = np.where(fullpop10.X_ST_OP.str.contains('4'), '1', '0')
-fullpop10['State_5'] = np.where(fullpop10.X_ST_OP.str.contains('5'), '1', '0')
-fullpop10['State_6'] = np.where(fullpop10.X_ST_OP.str.contains('6'), '1', '0')
-fullpop10['State_7'] = np.where(fullpop10.X_ST_OP.str.contains('7'), '1', '0')
-fullpop10['State_8'] = np.where(fullpop10.X_ST_OP.str.contains('8'), '1', '0')
-fullpop10['State_9'] = np.where(fullpop10.X_ST_OP.str.contains('9'), '1', '0')
+fullpop10['State_1'] = np.where(fullpop10.X_ST_OP.str.contains('1'), '1', '0').astype(np.int8)
+fullpop10['State_2'] = np.where(fullpop10.X_ST_OP.str.contains('2'), '1', '0').astype(np.int8)
+fullpop10['State_3'] = np.where(fullpop10.X_ST_OP.str.contains('3'), '1', '0').astype(np.int8)
+fullpop10['State_4'] = np.where(fullpop10.X_ST_OP.str.contains('4'), '1', '0').astype(np.int8)
+fullpop10['State_5'] = np.where(fullpop10.X_ST_OP.str.contains('5'), '1', '0').astype(np.int8)
+fullpop10['State_6'] = np.where(fullpop10.X_ST_OP.str.contains('6'), '1', '0').astype(np.int8)
+fullpop10['State_7'] = np.where(fullpop10.X_ST_OP.str.contains('7'), '1', '0').astype(np.int8)
+fullpop10['State_8'] = np.where(fullpop10.X_ST_OP.str.contains('8'), '1', '0').astype(np.int8)
+fullpop10['State_9'] = np.where(fullpop10.X_ST_OP.str.contains('9'), '1', '0').astype(np.int8)
 
 #Encode the others"
 
@@ -55,40 +68,69 @@ fullpop10['State_9'] = np.where(fullpop10.X_ST_OP.str.contains('9'), '1', '0')
 
 #"Gender"
 fullpop10['IDV_SEX_DCD'] = fullpop10['IDV_SEX_DCD'].apply('{:.0f}'.format)
-gd_IDV_SEX_DCD = pd.get_dummies(fullpop10['IDV_SEX_DCD'], prefix="Sex")
+gd_IDV_SEX_DCD = pd.get_dummies(fullpop10['IDV_SEX_DCD'], prefix="Sex", sparse=True)
 
 
-#"Occupation Codes"
+#"Occupation Codes" #1199 Unique Codes - Is this too wide?
+
 fullpop10['idv_ocptn_cd_10'] = fullpop10['idv_ocptn_cd_10'].apply('{:.0f}'.format)
-gd_IDV_OCPTN_CD_10 = pd.get_dummies(fullpop10['idv_ocptn_cd_10'], prefix="Ocpt_Code", sparse=True)
+#Create the hierachical structures.
+fullpop10['Occupation_1'] =  fullpop10['idv_ocptn_cd_10'].astype(str).str[0]
+gd_Occupation_1 = pd.get_dummies(fullpop10['Occupation_1'], prefix="Ocpt_1", sparse=True)
+fullpop10['Occupation_2'] =  fullpop10['idv_ocptn_cd_10'].astype(str).str[1]
+gd_Occupation_2 = pd.get_dummies(fullpop10['Occupation_2'], prefix="Ocpt_2", sparse=True)
+fullpop10['Occupation_3'] =  fullpop10['idv_ocptn_cd_10'].astype(str).str[2]
+gd_Occupation_3 = pd.get_dummies(fullpop10['Occupation_3'], prefix="Ocpt_3", sparse=True)
+fullpop10['Occupation_4'] =  fullpop10['idv_ocptn_cd_10'].astype(str).str[3]
+gd_Occupation_4 = pd.get_dummies(fullpop10['Occupation_4'], prefix="Ocpt_4", sparse=True)
+fullpop10['Occupation_5'] =  fullpop10['idv_ocptn_cd_10'].astype(str).str[4]
+gd_Occupation_5 = pd.get_dummies(fullpop10['Occupation_5'], prefix="Ocpt_5", sparse=True)
+fullpop10['Occupation_6'] =  fullpop10['idv_ocptn_cd_10'].astype(str).str[5]
+gd_Occupation_6 = pd.get_dummies(fullpop10['Occupation_6'], prefix="Ocpt_6", sparse=True)
 
-#"Main Job"
-gd_MAIN_JOB = pd.get_dummies(fullpop10['Main_Job'], prefix="Main_Job")
+#gd_IDV_OCPTN_CD_10 = pd.get_dummies(fullpop10['idv_ocptn_cd_10'], prefix="Ocpt_Code", sparse=True)
 
-#"Multiple Job Holders"
-gd_MULTIPLE_JOB = pd.get_dummies(fullpop10['Multiple_Job'], prefix="Multiple_Job")
 
-#"Industry Division"
-gd_DIV = pd.get_dummies(fullpop10['div'], prefix="div")
+#"Main Job" #2 Unique Codes
+gd_MAIN_JOB = pd.get_dummies(fullpop10['Main_Job'], prefix="Main_Job", sparse=True)
 
-#"SISCA"
+#"Multiple Job Holders" #2 Unique Codes
+gd_MULTIPLE_JOB = pd.get_dummies(fullpop10['Multiple_Job'], prefix="Multiple_Job", sparse=True)
+
+#"Industry Division" #19 Unique Codes
+gd_DIV = pd.get_dummies(fullpop10['div'], prefix="div", sparse=True)
+
+#"SISCA" #8 Unique Codes
 
 fullpop10['X_SISCA08'] = fullpop10['X_SISCA08'].apply('{:.0f}'.format)
-gd_SISCA = pd.get_dummies(fullpop10['X_SISCA08'], prefix="SISCA")
+gd_SISCA = pd.get_dummies(fullpop10['X_SISCA08'], prefix="SISCA" , sparse=True)
 
 #"SA2"
 fullpop10['SA2'] = fullpop10['SA2'].apply('{:.0f}'.format)
-gd_SA2 = pd.get_dummies(fullpop10['SA2'], prefix="SA2", sparse=True)
 
-#"Age"
+#Create the hierachical structures.
+fullpop10['SA2_State'] = fullpop10['SA2'].astype(str).str[0]
+gd_SA2_State = pd.get_dummies(fullpop10['SA2_State'], prefix="SA2_State", sparse=True)
+fullpop10['SA2_SA4'] = fullpop10['SA2'].astype(str).str[1:2]
+gd_SA2_SA4 = pd.get_dummies(fullpop10['SA2_SA4'], prefix="SA2_SA4", sparse=True)
+fullpop10['SA2_SA3'] = fullpop10['SA2'].astype(str).str[3:4]
+gd_SA2_SA3 = pd.get_dummies(fullpop10['SA2_SA3'], prefix="SA2_SA3", sparse=True)
+fullpop10['SA2_SA2'] = fullpop10['SA2'].astype(str).str[5:8]
+gd_SA2_SA2 = pd.get_dummies(fullpop10['SA2_SA2'], prefix="SA2_SA2", sparse=True)
+
+
+#gd_SA2 = pd.get_dummies(fullpop10['SA2'], prefix="SA2", sparse=True)
+
+#"Age" - This is ordinal, so create a dictionary and map it.
 age_dict = {'under 15': 0, '15-19': 1, '20-24' :2, '25-29': 3, '30-34': 4, '35-39': 5, '40-44': 6,'45-49': 7, '50-54': 8, '55-59': 9, '60-64': 10, '65-69': 11, '70 or older': 12}
 fullpop10['Age_Cat'] = fullpop10['age_on_1jul2009'].map(age_dict)
 fullpop10['Age_Cat'] = fullpop10['Age_Cat'].apply('{:.0f}'.format)
 
-fullpop10
-#"Piece each of the categories back togeter"
-full10 = pd.concat([fullpop10,gd_IDV_SEX_DCD,gd_MAIN_JOB,gd_MULTIPLE_JOB,gd_DIV,gd_SISCA,gd_SA2, gd_IDV_OCPTN_CD_10],axis=1)
+#Turn the dataset sparse.
+fullpop10  = fullpop10.to_sparse()
 
-#Split Dataset apart as it was before (NPP and PP)
-ready_NPP_10 = full10.query('bg_id' == np.NaN)
-ready_PP_10 = full10.query('bg_id' != np.NaN)
+
+#"Piece each of the categories back togeter"
+full10 = pd.concat([fullpop10,gd_IDV_SEX_DCD,gd_MAIN_JOB,gd_MULTIPLE_JOB,gd_DIV,gd_SISCA,gd_SA2_State,gd_SA2_SA4, gd_SA2_SA3,gd_SA2_SA2,gd_Occupation_1,gd_Occupation_2,gd_Occupation_3,gd_Occupation_4,gd_Occupation_5,gd_Occupation_6], axis=1)
+
+full10.to_pickle('processed10.pickle')
